@@ -1,0 +1,32 @@
+{
+  "name": "semverbot",
+  "version": "0.0.1",
+  "description": "Automate your project's version tagging",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skadecl/semverbot.git"
+  },
+  "keywords": [
+    "semverbot",
+    "semver",
+    "semantic",
+    "version",
+    "auto",
+    "bot",
+    "bump",
+    "release",
+    "hotfix",
+    "package",
+    "increase"
+  ],
+  "author": "skadecl",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/skadecl/semverbot/issues"
+  },
+  "homepage": "https://github.com/skadecl/semverbot#readme"
+}
