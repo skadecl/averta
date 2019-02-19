@@ -2,15 +2,15 @@
   "name": "semverbot",
   "version": "0.0.2",
   "description": "Automate your project's version tagging",
-  "main": "semverbot.js",
+  "main": "index.js",
   "scripts": {
     "clean": "rimraf bin",
     "test": "npm run lint && npm run cover",
     "test:prod": "cross-env BABEL_ENV=production npm run test",
-    "test:only": "mocha --require babel-core/register --require @babel/polyfill --recursive",
+    "test:only": "mocha --require babel-core/register --require babel-polyfill --recursive",
     "test:watch": "npm test -- --watch",
     "test:examples": "node examples/",
-    "cover": "istanbul cover _mocha -- --require babel-core/register --require @babel/polyfill --recursive",
+    "cover": "istanbul cover _mocha -- --require babel-core/register --require babel-polyfill --recursive",
     "lint": "eslint src test",
     "build": "cross-env BABEL_ENV=production babel src --out-dir dist",
     "prepublish": "npm run clean && npm run lint && npm run test && npm run build"
@@ -20,7 +20,7 @@
     "src"
   ],
   "bin": {
-    "semverbot": "dist/semverbot.js"
+    "semverbot": "dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -49,7 +49,7 @@
     "babel-cli": "^6.26.0",
     "babel-eslint": "^8.2.1",
     "babel-plugin-add-module-exports": "^0.2.1",
-    "babel-polyfill": "^6.26.0",
+    "babel-plugin-syntax-async-functions": "^6.13.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-minify": "^0.3.0",
     "chai": "^4.1.2",
@@ -64,8 +64,12 @@
     "rimraf": "^2.6.2"
   },
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
     "chalk": "^2.4.2",
     "cli-spinner": "^0.2.8",
+    "edit-json-file": "^1.2.1",
+    "jsonschema": "^1.2.4",
+    "semver": "^5.6.0",
     "shelljs": "^0.8.3"
   }
 }
