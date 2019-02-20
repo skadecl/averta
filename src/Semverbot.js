@@ -17,7 +17,7 @@ const init = async () => {
   let lastVersion;
 
   if (subjectOptions.SKIP) {
-    LogHelper.exit('Skip option detected in sommit subject', 'Skipping');
+    LogHelper.exit('Skip option detected in commit subject', 'Skipping');
   } else if (subjectOptions.FORCE_MAJOR) {
     increaseType = 'major';
   } else if (subjectOptions.FORCE_MINOR) {
