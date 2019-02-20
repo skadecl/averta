@@ -34,7 +34,7 @@ const checkBranchInConfig = async () => {
 };
 
 const getBranchNamesFromCommitHash = async (hash) => {
-  const [branchNames, err] = await until(ShellHelper.exec(`git branch --contains ${hash} --format='%(refname:short)'`));
+  const [branchNames, err] = await until(ShellHelper.exec(`git branch --contains ${hash} --format='%(refname:short)' --merged`));
   if (branchNames) {
     return branchNames;
   }
@@ -44,7 +44,6 @@ const getBranchNamesFromCommitHash = async (hash) => {
 const getCommitSubjectOptions = async () => {
   const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | cat'));
   if (subjectLines) {
-    subjectLines.push('ddiaskdjaskdj ksajdask [svb major]');
     return SubjectOptionsHelper.build(subjectLines);
   }
   return LogHelper.throwException('Could not get last commit subject', err);
@@ -69,14 +68,44 @@ const getLastMergedBranchesNames = async () => {
   return LogHelper.throwException('Could not find last merged branch', hashesErr);
 };
 
+const isBranchClean = async (branchName) => {
+  const [diff, err] = await until(ShellHelper.exec(`git diff ${branchName} | head -1`));
+  if (!err) {
+    return !diff;
+  }
+  return LogHelper.throwException('Could not get branch diff', err);
+};
+
+const getBranchPushTimestamp = async (branchName) => {
+  const [reflogLines, err] = await until(ShellHelper.exec(`git reflog show ${branchName} --pretty=\'%gd\' --date=unix -n 1`));
+  if (reflogLines) {
+    const timestampMatches = reflogLines[0].match('\@\{([0-9]+)\}');
+    if (timestampMatches && timestampMatches[1]) {
+      return +timestampMatches[1];
+    }
+  }
+  return LogHelper.throwException(`Could not get reflog for branch ${branchName}`, err);
+};
+
 const getLastMergedPrefix = async () => {
   const currentBranchName = await getCurrentBranchName();
   const mergedBranchNames = await getLastMergedBranchesNames();
-  const lasMergedBranchName = mergedBranchNames.filter(name => name !== currentBranchName)[0];
-  const splittedName = lasMergedBranchName.split('/');
-  if (splittedName.length > 1) {
-    return splittedName[0];
+  const candidateBranches = (
+    await Promise.all(mergedBranchNames
+      .filter(name => name !== currentBranchName)
+      .filter(name => isBranchClean(name))
+      .map(async name => ({ name, date: await getBranchPushTimestamp(name) })))
+  ).sort((branchA, branchB) => branchA.date - branchB.date);
+
+  if (!candidateBranches) {
+    LogHelper.throwException('Could not find a suitable merged branch candidate');
   }
+
+  const splitName = candidateBranches[0].name.split('/');
+  if (splitName.length > 1) {
+    return splitName[0];
+  }
+
   return LogHelper.throwException('Could not extract prefix from last merged branch');
 };
 
@@ -88,9 +117,23 @@ const getLastTagVersion = async () => {
   return LogHelper.throwException('Could not get last tag', err);
 };
 
+const getCommitSubjectVersion = async () => {
+  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | cat'));
+  if (subjectLines) {
+    let cleanVersion = null;
+    subjectLines.reverse().forEach((line) => {
+      const lineVersion = semver.clean(line);
+      cleanVersion = semver.valid(lineVersion) ? lineVersion : null;
+    });
+    return cleanVersion;
+  }
+  return LogHelper.throwException('Could not get last commit subject', err);
+};
+
 export default {
   fetchRemote,
   checkCleanliness,
+  getCommitSubjectVersion,
   getCurrentBranchName,
   getCommitSubjectOptions,
   getLastTagVersion,
