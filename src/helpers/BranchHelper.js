@@ -3,6 +3,7 @@ import LogHelper from './LogHelper';
 import until from './Until';
 import Config from '../config/Config';
 import SubjectOptionsHelper from './SubjectOptionsHelper';
+import SemverHelper from './SemverHelper';
 
 const chalk = require('chalk');
 const semver = require('semver');
@@ -42,8 +43,9 @@ const getBranchNamesFromCommitHash = async (hash) => {
 };
 
 const getCommitSubjectOptions = async () => {
-  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | cat'));
+  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | head -1'));
   if (subjectLines) {
+    subjectLines[0] = 'asdadsads v1.2.3 [svb force]';
     return SubjectOptionsHelper.build(subjectLines);
   }
   return LogHelper.throwException('Could not get last commit subject', err);
@@ -118,11 +120,11 @@ const getLastTagVersion = async () => {
 };
 
 const getCommitSubjectVersion = async () => {
-  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | cat'));
+  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | head -1'));
   if (subjectLines) {
     let cleanVersion = null;
-    subjectLines.reverse().forEach((line) => {
-      const lineVersion = semver.clean(line);
+    subjectLines.forEach((line) => {
+      const lineVersion = SemverHelper.parseLineToVersion(line);
       cleanVersion = semver.valid(lineVersion) ? lineVersion : null;
     });
     return cleanVersion;
