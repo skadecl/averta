@@ -14,7 +14,14 @@ const getIncreaseType = (prefix) => {
   return LogHelper.exit('Last merged branch prefix is not included in any flow', 'Skipping...');
 };
 
+const parseLineToVersion = (line) => {
+  const matcher = new RegExp('((0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?)');
+  const result = line.match(matcher);
+  return result && result[0] ? result[0] : null;
+};
+
 
 export default {
-  getIncreaseType
+  getIncreaseType,
+  parseLineToVersion
 };
