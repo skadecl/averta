@@ -3,10 +3,10 @@ const containsOption = (subjectLines, option) => (
     .some(line => line.includes(option))
 );
 
-const build = subjectLines => {
+const build = (subjectLines) => {
   const options = {
     SKIP: '[svb skip]',
-    OVERRIDE_VERSION: '[svb over]',
+    FORCE_VERSION: '[svb force]',
     FORCE_MAJOR: '[svb major]',
     FORCE_MINOR: '[svb minor]',
     FORCE_PATCH: '[svb patch]',
