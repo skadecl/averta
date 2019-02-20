@@ -4,6 +4,7 @@ import SemverHelper from './helpers/SemverHelper';
 import LogHelper from './helpers/LogHelper';
 
 const semver = require('semver');
+const chalk = require('chalk');
 
 const init = async () => {
   await Config.load();
@@ -13,6 +14,7 @@ const init = async () => {
 
   const subjectOptions = await BranchHelper.getCommitSubjectOptions();
   let increaseType;
+  let lastVersion;
 
   if (subjectOptions.SKIP) {
     LogHelper.exit('Skip option detected in sommit subject', 'Skipping');
@@ -29,10 +31,18 @@ const init = async () => {
     increaseType = SemverHelper.getIncreaseType(mergedPrefix);
   }
 
-  const lastTag = await BranchHelper.getLastTagVersion();
-  console.log('deploy tipe: ', increaseType);
-  console.log('last version: ', lastTag);
-  console.log('new version: ', semver.inc(lastTag, increaseType));
+  if (subjectOptions.FORCE_VERSION) {
+    lastVersion = await BranchHelper.getCommitSubjectVersion();
+    if (!lastVersion) {
+      LogHelper.throwException(`Failed to force version: ${chalk.underline('No valid version was found in commit subject.')}`);
+    }
+  } else {
+    lastVersion = await BranchHelper.getLastTagVersion();
+  }
+
+  console.log('Increase type: ', increaseType);
+  console.log('Last version: ', lastVersion);
+  console.log('New version: ', semver.inc(lastVersion, increaseType));
 };
 
 export default {
