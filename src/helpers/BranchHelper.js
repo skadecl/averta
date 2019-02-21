@@ -45,7 +45,6 @@ const getBranchNamesFromCommitHash = async (hash) => {
 const getCommitSubjectOptions = async () => {
   const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | head -1'));
   if (subjectLines) {
-    subjectLines[0] = 'asdadsads v1.2.3 [svb force]';
     return SubjectOptionsHelper.build(subjectLines);
   }
   return LogHelper.throwException('Could not get last commit subject', err);
@@ -114,9 +113,9 @@ const getLastMergedPrefix = async () => {
 const getLastTagVersion = async () => {
   const [tagLines, err] = await until(ShellHelper.exec('git describe --abbrev=0'));
   if (tagLines) {
-    return semver.clean(tagLines[0]);
+    return SemverHelper.parseLineToVersion(tagLines[0]);
   }
-  return LogHelper.throwException('Could not get last tag', err);
+  return LogHelper.throwException('No tag was found', err);
 };
 
 const getCommitSubjectVersion = async () => {
@@ -127,7 +126,11 @@ const getCommitSubjectVersion = async () => {
       const lineVersion = SemverHelper.parseLineToVersion(line);
       cleanVersion = semver.valid(lineVersion) ? lineVersion : null;
     });
-    return cleanVersion;
+
+    if (cleanVersion) {
+      return cleanVersion;
+    }
+    return LogHelper.throwException('No valid version could be obtained from last commit subject.');
   }
   return LogHelper.throwException('Could not get last commit subject', err);
 };
