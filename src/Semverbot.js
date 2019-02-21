@@ -13,8 +13,10 @@ const init = async () => {
   await BranchHelper.checkBranchInConfig();
 
   const subjectOptions = await BranchHelper.getCommitSubjectOptions();
+  let mergedPrefix;
   let increaseType;
-  let lastVersion;
+  let currentVersion;
+  let newVersion;
 
   if (subjectOptions.SKIP) {
     LogHelper.exit('Skip option detected in commit subject', 'Skipping');
@@ -27,22 +29,26 @@ const init = async () => {
   }
 
   if (!increaseType) {
-    const mergedPrefix = await BranchHelper.getLastMergedPrefix();
+    mergedPrefix = await BranchHelper.getLastMergedPrefix();
     increaseType = SemverHelper.getIncreaseType(mergedPrefix);
   }
 
   if (subjectOptions.FORCE_VERSION) {
-    lastVersion = await BranchHelper.getCommitSubjectVersion();
-    if (!lastVersion) {
-      LogHelper.throwException(`Failed to force version: ${chalk.underline('No valid version was found in commit subject.')}`);
-    }
+    currentVersion = await BranchHelper.getCommitSubjectVersion();
+    newVersion = currentVersion;
+    LogHelper.info('Force version option was detected. Version not increasing');
   } else {
-    lastVersion = await BranchHelper.getLastTagVersion();
+    currentVersion = await BranchHelper.getLastTagVersion();
+    newVersion = semver.inc(currentVersion, increaseType);
+    if (mergedPrefix) {
+      LogHelper.info(`Merged prefix is ${chalk.underline.green(mergedPrefix)}. Increasing ${chalk.underline.yellow(increaseType)} version.`);
+    } else {
+      LogHelper.info(`Forced increase type detected. Ingreasing ${chalk.underline(increaseType)}`);
+    }
   }
 
-  console.log('Increase type: ', increaseType);
-  console.log('Last version: ', lastVersion);
-  console.log('New version: ', semver.inc(lastVersion, increaseType));
+  LogHelper.info(`Current version is ${chalk.underline.blue(currentVersion)}`);
+  LogHelper.info(`New version will be ${chalk.underline.blue(newVersion)}`);
 };
 
 export default {
