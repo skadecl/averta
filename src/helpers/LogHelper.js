@@ -1,3 +1,5 @@
+import BranchHelper from './BranchHelper';
+
 const chalk = require('chalk');
 const process = require('process');
 const { Spinner } = require('cli-spinner');
@@ -42,14 +44,19 @@ const error = (message, description) => {
   log(messageOutput);
 };
 
-const throwException = (message, description) => {
+const throwException = async (message, description, resetChanges = true) => {
   error(message);
 
   if (description && description.length) {
     info('Cmd output', description);
   }
 
-  process.exit(-1);
+  if (resetChanges) {
+    await BranchHelper.resetChanges();
+    process.exit(-1);
+  } else {
+    process.exit(-1);
+  }
 };
 
 
