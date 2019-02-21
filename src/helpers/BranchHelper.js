@@ -6,6 +6,7 @@ import SemverHelper from './SemverHelper';
 
 const chalk = require('chalk');
 const semver = require('semver');
+const shell = require('shelljs');
 
 const checkGitVersion = async () => {
   const [, err] = await until(ShellHelper.exec('git --version'));
@@ -16,8 +17,8 @@ const checkGitVersion = async () => {
 };
 
 const checkGitDirectory = async () => {
-  const [result, err] = await until(ShellHelper.exec('git rev-parse --is-inside-work-tree'));
-  if (result && result === 'true') {
+  const [resultLines, err] = await until(ShellHelper.exec('git rev-parse --is-inside-work-tree'));
+  if (resultLines && resultLines[0] === 'true') {
     return true;
   } else if (err) {
     return LogHelper.throwException('Could not check whether current directory is a git project.', err, false);
@@ -144,12 +145,49 @@ const getCommitSubjectVersion = async () => {
   return LogHelper.throwException('Could not get last commit subject', err);
 };
 
-const resetChanges = async () => {
-  LogHelper.info('Resetting changes...');
-  const [, err] = await until(ShellHelper.exec('git reset --hard'));
-  if (err) {
-    return LogHelper.throwException('Could not reset directory changes. You must reset manually before using semverbot again.');
+const resetChanges = () => {
+  LogHelper.info('Resetting all changes and commits...');
+  if (shell.exec('git reset --hard', { silent: true }).code !== 0) {
+    LogHelper.error('Could not reset changes. You must discard them yourself before using semverbot again.');
   }
+};
+
+const addFile = async (fileUrl) => {
+  const [, err] = await until(ShellHelper.exec(`git add ${fileUrl}`));
+  if (err) {
+    return LogHelper.throwException(`Could not add file ${fileUrl}`, err);
+  }
+  return true;
+};
+
+const addFiles = async (fileHandlers) => {
+  let fileUrls = [];
+  Object.keys(fileHandlers)
+    .forEach((locator) => {
+      const locatorFiles = fileHandlers[locator].map(file => file.url);
+      fileUrls = fileUrls.concat(locatorFiles);
+    });
+
+  fileUrls = fileUrls.map(async url => addFile(url));
+  return Promise.all(fileUrls);
+};
+
+const commitAndPush = async () => {
+  const message = 'Example commit';
+  const [, err] = await until(ShellHelper.exec(`git commit -m "${message}"`));
+  if (!err) {
+    return true;
+  }
+  return LogHelper.throwException('Could not commit/push changed files', null, false);
+};
+
+const pushFiles = async (fileHandlers) => {
+  await addFiles(fileHandlers);
+  LogHelper.info('All files were added successfully');
+  const spinner = LogHelper.spinner('Pushing...');
+  await commitAndPush();
+  spinner.stop(true);
+  LogHelper.info('All files were committed and pushed successfully');
   return true;
 };
 
@@ -163,5 +201,6 @@ export default {
   getCommitSubjectOptions,
   getLastTagVersion,
   getLastMergedPrefix,
-  resetChanges
+  resetChanges,
+  pushFiles
 };
