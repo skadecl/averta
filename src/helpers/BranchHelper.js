@@ -1,19 +1,36 @@
 import ShellHelper from './ShellHelper';
 import LogHelper from './LogHelper';
 import until from './Until';
-import Config from '../config/Config';
 import SubjectOptionsHelper from './SubjectOptionsHelper';
 import SemverHelper from './SemverHelper';
 
 const chalk = require('chalk');
 const semver = require('semver');
 
+const checkGitVersion = async () => {
+  const [, err] = await until(ShellHelper.exec('git --version'));
+  if (!err) {
+    return true;
+  }
+  return LogHelper.throwException('You must install git before using semverbot.', null, false);
+};
+
+const checkGitDirectory = async () => {
+  const [result, err] = await until(ShellHelper.exec('git rev-parse --is-inside-work-tree'));
+  if (result && result === 'true') {
+    return true;
+  } else if (err) {
+    return LogHelper.throwException('Could not check whether current directory is a git project.', err, false);
+  }
+  return LogHelper.throwException('You must be inside a git directory in order to use semverbot.', null, false);
+};
+
 const checkCleanliness = async () => {
   const [dirty, err] = await until(ShellHelper.exec('git diff --quiet || echo "dirty"'));
   if (err) {
-    return LogHelper.throwException('Could not check directory cleanliness', err);
+    return LogHelper.throwException('Could not check directory cleanliness.', err, false);
   } else if (dirty) {
-    return LogHelper.throwException(`Directory is not clean. You must ${chalk.underline('commit')} or ${chalk.underline('discard')} your changes first.`);
+    return LogHelper.throwException(`Directory is not clean. You must ${chalk.underline('commit')} or ${chalk.underline('discard')} your changes first.`, null, false);
   }
   return true;
 };
@@ -24,14 +41,6 @@ const getCurrentBranchName = async () => {
     return nameLines[0];
   }
   return LogHelper.throwException('Could not get current branch name', err);
-};
-
-const checkBranchInConfig = async () => {
-  const currentBranchName = await getCurrentBranchName();
-  if (Config.get().branches.includes(currentBranchName)) {
-    return true;
-  }
-  return LogHelper.exit('Current branch is not included in config file', 'Skipping...');
 };
 
 const getBranchNamesFromCommitHash = async (hash) => {
@@ -52,7 +61,7 @@ const getCommitSubjectOptions = async () => {
 
 const fetchRemote = async () => {
   const spinner = LogHelper.spinner('Fetching branches');
-  const [, fetchedErr] = await until(ShellHelper.exec('git fetch'));
+  const [, fetchedErr] = await until(ShellHelper.exec('git fetch && git pull'));
   spinner.stop(true);
   if (fetchedErr) {
     return LogHelper.throwException('Could not fetch remote branches', fetchedErr);
@@ -135,13 +144,24 @@ const getCommitSubjectVersion = async () => {
   return LogHelper.throwException('Could not get last commit subject', err);
 };
 
+const resetChanges = async () => {
+  LogHelper.info('Resetting changes...');
+  const [, err] = await until(ShellHelper.exec('git reset --hard'));
+  if (err) {
+    return LogHelper.throwException('Could not reset directory changes. You must reset manually before using semverbot again.');
+  }
+  return true;
+};
+
 export default {
   fetchRemote,
+  checkGitVersion,
   checkCleanliness,
+  checkGitDirectory,
   getCommitSubjectVersion,
   getCurrentBranchName,
   getCommitSubjectOptions,
   getLastTagVersion,
-  checkBranchInConfig,
-  getLastMergedPrefix
+  getLastMergedPrefix,
+  resetChanges
 };
