@@ -69,6 +69,7 @@
     "chalk": "^2.4.2",
     "cli-spinner": "^0.2.8",
     "edit-json-file": "^1.2.1",
+    "figlet": "^1.2.1",
     "jsonschema": "^1.2.4",
     "semver": "^5.6.0",
     "shelljs": "^0.8.3"

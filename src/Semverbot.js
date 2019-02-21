@@ -6,8 +6,22 @@ import FileHandlers from './handlers';
 
 const semver = require('semver');
 const chalk = require('chalk');
+const figlet = require('figlet');
+const { version } = require('../package.json');
+
+const greet = () => {
+  figlet('Semverbot', (err, data) => {
+    if (err) {
+      return LogHelper.throwException('Could not show greet message.');
+    }
+    console.log(data);
+    return LogHelper.info(`Semverbot v${version}`);
+  });
+};
 
 const init = async () => {
+  greet();
+
   await BranchHelper.checkGitVersion();
   await BranchHelper.checkGitDirectory();
   await BranchHelper.checkCleanliness();
@@ -55,12 +69,8 @@ const init = async () => {
   LogHelper.info(`Current version is ${chalk.underline.blue(currentVersion)}`);
   LogHelper.info(`New version will be ${chalk.underline.blue(newVersion)}`);
 
-  const fileHandlers = Object.keys(branchConfig.filesToUpdate);
-  fileHandlers.forEach((handlerLocator) => {
-    const handlerInstance = FileHandlers.Locator.getHandler(handlerLocator);
-    const files = branchConfig.filesToUpdate[handlerLocator];
-    handlerInstance.updateFiles(files, newVersion);
-  });
+  FileHandlers.handleFileUpdate(branchConfig.fileHandlers, newVersion);
+  await BranchHelper.pushFiles(branchConfig.fileHandlers);
 };
 
 export default {
