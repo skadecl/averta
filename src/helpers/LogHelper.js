@@ -1,4 +1,4 @@
-import BranchHelper from './BranchHelper';
+import ProcessHelper from './ProcessHelper';
 
 const chalk = require('chalk');
 const process = require('process');
@@ -44,19 +44,17 @@ const error = (message, description) => {
   log(messageOutput);
 };
 
-const throwException = async (message, description, resetChanges = true) => {
+const throwException = (message, description, resetChanges = true) => {
   error(message);
 
   if (description && description.length) {
     info('Cmd output', description);
   }
 
-  if (resetChanges) {
-    await BranchHelper.resetChanges();
-    process.exit(-1);
-  } else {
-    process.exit(-1);
-  }
+  const exitCode = resetChanges ?
+    ProcessHelper.EXIT_CODES.RESET : ProcessHelper.EXIT_CODES.NO_RESET;
+
+  process.exit(exitCode);
 };
 
 
