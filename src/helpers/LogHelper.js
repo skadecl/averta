@@ -34,9 +34,9 @@ const exit = (message, description) => {
 };
 
 const error = (message, description) => {
-  let messageOutput = `[ERROR] ${message}`;
+  let messageOutput = `[ERROR] ${chalk.bold.red(message)}`;
   if (description) {
-    messageOutput += `: ${chalk.bold.red(description)}`;
+    messageOutput += `: ${description}`;
   }
 
   log(messageOutput);
