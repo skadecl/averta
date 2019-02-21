@@ -35,7 +35,7 @@ const updateFiles = (filesData, newVersion) => {
     fileKeys.forEach((key) => {
       const value = openedFile.get(key);
       if (!value) {
-        return LogHelper.throwException(`Key ${chalk.underline.white(key)} for file ${chalk.underline.white(file.url)} was not found.`);
+        return LogHelper.throwException(`Key ${chalk.underline.white(key)} was not found in ${chalk.underline.white(file.url)} file.`);
       }
       return openedFile.set(key, newVersion);
     });
