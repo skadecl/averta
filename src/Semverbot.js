@@ -2,21 +2,26 @@ import BranchHelper from './helpers/BranchHelper';
 import Config from './config/Config';
 import SemverHelper from './helpers/SemverHelper';
 import LogHelper from './helpers/LogHelper';
+import FileHandlers from './handlers';
 
 const semver = require('semver');
 const chalk = require('chalk');
 
 const init = async () => {
-  await Config.load();
-  await BranchHelper.fetchRemote();
+  await BranchHelper.checkGitVersion();
+  await BranchHelper.checkGitDirectory();
   await BranchHelper.checkCleanliness();
-  await BranchHelper.checkBranchInConfig();
+  await BranchHelper.fetchRemote();
+  await Config.load();
 
-  const subjectOptions = await BranchHelper.getCommitSubjectOptions();
   let mergedPrefix;
   let incrementType;
   let currentVersion;
   let newVersion;
+
+  const subjectOptions = await BranchHelper.getCommitSubjectOptions();
+  const currentBranch = await BranchHelper.getCurrentBranchName();
+  const branchConfig = Config.setBranch(currentBranch);
 
   if (subjectOptions.SKIP) {
     LogHelper.exit('Skip option detected in commit subject', 'Skipping');
@@ -49,6 +54,13 @@ const init = async () => {
 
   LogHelper.info(`Current version is ${chalk.underline.blue(currentVersion)}`);
   LogHelper.info(`New version will be ${chalk.underline.blue(newVersion)}`);
+
+  const fileHandlers = Object.keys(branchConfig.filesToUpdate);
+  fileHandlers.forEach((handlerLocator) => {
+    const handlerInstance = FileHandlers.Locator.getHandler(handlerLocator);
+    const files = branchConfig.filesToUpdate[handlerLocator];
+    handlerInstance.updateFiles(files, newVersion);
+  });
 };
 
 export default {
