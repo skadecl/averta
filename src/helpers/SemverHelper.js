@@ -2,7 +2,7 @@ import LogHelper from './LogHelper';
 import Config from '../config/Config';
 
 const getIncrementType = (prefix) => {
-  const flows = Config.get().versioning;
+  const flows = Config.current().versioning;
 
   if (flows.major.includes(prefix)) {
     return 'major';
