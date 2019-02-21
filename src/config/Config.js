@@ -9,6 +9,7 @@ const JSONValidator = require('jsonschema').Validator;
 const semverbotConfig = {
   loaded: false,
   valid: false,
+  current: null,
   data: null
 };
 
@@ -44,10 +45,23 @@ const load = () => new Promise((resolve) => {
   }
 });
 
-const get = () => semverbotConfig.data;
+const all = () => semverbotConfig.data;
+
+const current = () => semverbotConfig.current;
+
+const setBranch = (branchName) => {
+  const config = semverbotConfig.data.find(cfg => cfg.branches.includes(branchName));
+  if (config) {
+    semverbotConfig.current = config;
+    return config;
+  }
+  return LogHelper.throwException(`Branch ${chalk.underline(branchName)} was not found in configuration file.`);
+};
 
 
 export default {
   load,
-  get
+  all,
+  setBranch,
+  current
 };
