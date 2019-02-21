@@ -38,7 +38,7 @@ export default {
           }
         }
       },
-      filesToUpdate: {
+      fileHandlers: {
         required: true,
         type: 'object',
         patternProperties: {
