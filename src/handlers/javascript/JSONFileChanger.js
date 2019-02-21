@@ -14,7 +14,7 @@ const isKeyValid = key => (
   typeof key === 'string'
 );
 
-const updateFiles = (filesData) => {
+const updateFiles = (filesData, newVersion) => {
   const rootPath = process.cwd();
 
   filesData.forEach((file) => {
@@ -34,11 +34,10 @@ const updateFiles = (filesData) => {
 
     fileKeys.forEach((key) => {
       const value = openedFile.get(key);
-      if (value) {
-        openedFile.set(value);
-        return value;
+      if (!value) {
+        return LogHelper.throwException(`Key ${chalk.underline.white(key)} for file ${chalk.underline.white(file.url)} was not found.`);
       }
-      return LogHelper.throwException(`Key ${chalk.underline.white(key)} for file ${chalk.underline.white(file.url)} was not found.`);
+      return openedFile.set(key, newVersion);
     });
 
     openedFile.save();
