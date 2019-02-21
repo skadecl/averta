@@ -14,36 +14,36 @@ const init = async () => {
 
   const subjectOptions = await BranchHelper.getCommitSubjectOptions();
   let mergedPrefix;
-  let increaseType;
+  let incrementType;
   let currentVersion;
   let newVersion;
 
   if (subjectOptions.SKIP) {
     LogHelper.exit('Skip option detected in commit subject', 'Skipping');
   } else if (subjectOptions.FORCE_MAJOR) {
-    increaseType = 'major';
+    incrementType = 'major';
   } else if (subjectOptions.FORCE_MINOR) {
-    increaseType = 'minor';
+    incrementType = 'minor';
   } else if (subjectOptions.FORCE_PATCH) {
-    increaseType = 'patch';
+    incrementType = 'patch';
   }
 
-  if (!increaseType) {
+  if (!incrementType) {
     mergedPrefix = await BranchHelper.getLastMergedPrefix();
-    increaseType = SemverHelper.getIncreaseType(mergedPrefix);
+    incrementType = SemverHelper.getIncrementType(mergedPrefix);
   }
 
   if (subjectOptions.FORCE_VERSION) {
     currentVersion = await BranchHelper.getCommitSubjectVersion();
     newVersion = currentVersion;
-    LogHelper.info('Force version option was detected. Version not increasing');
+    LogHelper.info('Force version option was detected. Version not incrementing');
   } else {
     currentVersion = await BranchHelper.getLastTagVersion();
-    newVersion = semver.inc(currentVersion, increaseType);
+    newVersion = semver.inc(currentVersion, incrementType);
     if (mergedPrefix) {
-      LogHelper.info(`Merged prefix is ${chalk.underline.green(mergedPrefix)}. Increasing ${chalk.underline.yellow(increaseType)} version.`);
+      LogHelper.info(`Merged prefix is ${chalk.underline.green(mergedPrefix)}. Incrementing ${chalk.underline.yellow(incrementType)} version.`);
     } else {
-      LogHelper.info(`Forced increase type detected. Ingreasing ${chalk.underline(increaseType)}`);
+      LogHelper.info(`Forced increment type detected. Incrementing ${chalk.underline(incrementType)}`);
     }
   }
 

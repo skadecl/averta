@@ -37,7 +37,8 @@
     "release",
     "hotfix",
     "package",
-    "increase"
+    "increase",
+    "increment"
   ],
   "author": "skadecl",
   "license": "MIT",

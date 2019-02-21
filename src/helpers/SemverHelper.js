@@ -1,7 +1,7 @@
 import LogHelper from './LogHelper';
 import Config from '../config/Config';
 
-const getIncreaseType = (prefix) => {
+const getIncrementType = (prefix) => {
   const flows = Config.get().versioning;
 
   if (flows.major.includes(prefix)) {
@@ -22,6 +22,6 @@ const parseLineToVersion = (line) => {
 
 
 export default {
-  getIncreaseType,
+  getIncrementType,
   parseLineToVersion
 };
