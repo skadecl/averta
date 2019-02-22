@@ -36,6 +36,7 @@ const init = async () => {
 
   const subjectOptions = await BranchHelper.getCommitSubjectOptions();
   const currentBranch = await BranchHelper.getCurrentBranchName();
+  const currentRepository = await BranchHelper.getRepositoryName();
   const branchConfig = Config.setBranch(currentBranch);
 
   if (subjectOptions.SKIP) {
@@ -71,6 +72,7 @@ const init = async () => {
   LogHelper.info(`New version will be ${chalk.underline(newVersion)}`);
 
   DeployDataHelper.set({
+    currentRepository,
     currentBranch,
     subjectOptions,
     mergedPrefix,
@@ -82,6 +84,7 @@ const init = async () => {
   FileHandlers.handleFileUpdate(branchConfig.fileHandlers, newVersion);
   await BranchHelper.pushFiles(branchConfig.fileHandlers);
   await BranchHelper.pushTag(newVersion);
+  await DeployDataHelper.sendWebHooks(branchConfig.webHooks);
 };
 
 export default {
