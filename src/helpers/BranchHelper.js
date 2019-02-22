@@ -206,6 +206,14 @@ const pushTag = async (tag) => {
   return tagLines;
 };
 
+const getRepositoryName = async () => {
+  const [nameLines, err] = await until(ShellHelper.exec('git rev-parse --show-toplevel'));
+  if (err) {
+    return LogHelper.throwException('Could not obtain repository name');
+  }
+  return nameLines[0].split('/').slice(-1);
+};
+
 export default {
   fetchRemote,
   checkGitVersion,
@@ -218,5 +226,6 @@ export default {
   getLastMergedPrefix,
   resetChanges,
   pushFiles,
-  pushTag
+  pushTag,
+  getRepositoryName
 };
