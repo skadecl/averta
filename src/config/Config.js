@@ -15,12 +15,8 @@ const semverbotConfig = {
 
 const isConfigValid = () => {
   const configValidator = new JSONValidator();
-  configValidator.addSchema(ConfigSchema.FileHandlersSchema, '/FileHandlers');
-  configValidator.addSchema(ConfigSchema.RuleSchema, '/Rule');
-  configValidator.addSchema(ConfigSchema.WebHooksSchema, '/WebHooks');
-  configValidator.addSchema(ConfigSchema.MessagesSchema, '/Messages');
-  configValidator.addSchema(ConfigSchema.TargetBranches, '/TargetBranches');
-  configValidator.addSchema(ConfigSchema.Config, '/Config');
+  Object.keys(ConfigSchema)
+    .forEach(schema => configValidator.addSchema(ConfigSchema[schema], ConfigSchema[schema].id));
   const result = configValidator.validate(semverbotConfig.data, ConfigSchema.Config);
 
   if (result.errors.length) {

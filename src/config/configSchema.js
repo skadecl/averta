@@ -24,7 +24,9 @@ const WebHooksSchema = {
     additionalProperties: false,
     properties: {
       method: { type: 'string' },
-      url: { type: 'string' }
+      url: { type: 'string' },
+      payload: { type: 'object' },
+      template: { type: 'string' }
     }
   }
 };
