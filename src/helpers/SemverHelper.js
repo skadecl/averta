@@ -2,13 +2,13 @@ import LogHelper from './LogHelper';
 import Config from '../config/Config';
 
 const getIncrementType = (prefix) => {
-  const flows = Config.current().versioning;
+  const flows = Config.current().rules;
 
-  if (flows.major.includes(prefix)) {
+  if (flows.major.prefixes.includes(prefix)) {
     return 'major';
-  } else if (flows.minor.includes(prefix)) {
+  } else if (flows.minor.prefixes.includes(prefix)) {
     return 'minor';
-  } else if (flows.patch.includes(prefix)) {
+  } else if (flows.patch.prefixes.includes(prefix)) {
     return 'patch';
   }
   return LogHelper.exit('Last merged branch prefix is not included in any flow', 'Skipping...');

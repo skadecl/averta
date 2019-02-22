@@ -1,5 +1,5 @@
 import LogHelper from '../helpers/LogHelper';
-import configSchema from './configSchema';
+import ConfigSchema from './ConfigSchema';
 
 const jsonFile = require('edit-json-file');
 const process = require('process');
@@ -15,12 +15,17 @@ const semverbotConfig = {
 
 const isConfigValid = () => {
   const configValidator = new JSONValidator();
-  configValidator.addSchema(configSchema);
-  const result = configValidator.validate(semverbotConfig.data, configSchema);
+  configValidator.addSchema(ConfigSchema.FileHandlersSchema, '/FileHandlers');
+  configValidator.addSchema(ConfigSchema.RuleSchema, '/Rule');
+  configValidator.addSchema(ConfigSchema.WebHooksSchema, '/WebHooks');
+  configValidator.addSchema(ConfigSchema.MessagesSchema, '/Messages');
+  configValidator.addSchema(ConfigSchema.TargetBranches, '/TargetBranches');
+  configValidator.addSchema(ConfigSchema.Config, '/Config');
+  const result = configValidator.validate(semverbotConfig.data, ConfigSchema.Config);
 
   if (result.errors.length) {
     result.errors.forEach((error) => {
-      const propName = `${error.property.replace('instance.', 'Config.')}`;
+      const propName = `${error.property.replace('instance', 'Config')}`;
       LogHelper.error(`${propName} ${error.message}`);
     });
 
@@ -50,7 +55,7 @@ const all = () => semverbotConfig.data;
 const current = () => semverbotConfig.current;
 
 const setBranch = (branchName) => {
-  const config = semverbotConfig.data.find(cfg => cfg.branches.includes(branchName));
+  const config = semverbotConfig.data.find(cfg => cfg.targetBranches.includes(branchName));
   if (config) {
     semverbotConfig.current = config;
     return config;
