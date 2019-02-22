@@ -3,6 +3,8 @@ import LogHelper from './LogHelper';
 import until from './Until';
 import SubjectOptionsHelper from './SubjectOptionsHelper';
 import SemverHelper from './SemverHelper';
+import Config from '../config/Config';
+import DeployDataHelper from './DeployDataHelper';
 
 const chalk = require('chalk');
 const semver = require('semver');
@@ -173,8 +175,10 @@ const addFiles = async (fileHandlers) => {
 };
 
 const commitAndPush = async () => {
-  const message = 'Example commit';
+  const message = DeployDataHelper.fillTemplate(Config.current().messages.commit);
+  const spinner = LogHelper.spinner('Pushing...');
   const [, err] = await until(ShellHelper.exec(`git commit -m "${message}"`));
+  spinner.stop(true);
   if (!err) {
     return true;
   }
@@ -191,6 +195,17 @@ const pushFiles = async (fileHandlers) => {
   return true;
 };
 
+const pushTag = async (tag) => {
+  const message = DeployDataHelper.fillTemplate(Config.current().messages.tag);
+  const prefix = 'v';
+  const [tagLines, err] = await until(ShellHelper.exec(`git tag -a ${prefix}${tag} -m "${message}"`));
+  if (err) {
+    return LogHelper.throwException(`Could not create a tag named ${prefix}${tag}`, err);
+  }
+  LogHelper.info(`Tag ${prefix}${tag} was added and pushed successfully.`);
+  return tagLines;
+};
+
 export default {
   fetchRemote,
   checkGitVersion,
@@ -202,5 +217,6 @@ export default {
   getLastTagVersion,
   getLastMergedPrefix,
   resetChanges,
-  pushFiles
+  pushFiles,
+  pushTag
 };

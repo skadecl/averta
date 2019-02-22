@@ -3,6 +3,7 @@ import Config from './config/Config';
 import SemverHelper from './helpers/SemverHelper';
 import LogHelper from './helpers/LogHelper';
 import FileHandlers from './handlers';
+import DeployDataHelper from './helpers/DeployDataHelper';
 
 const semver = require('semver');
 const chalk = require('chalk');
@@ -14,8 +15,8 @@ const greet = () => {
     if (err) {
       return LogHelper.throwException('Could not show greet message.');
     }
-    console.log(data);
-    return LogHelper.info(`Semverbot v${version}`);
+    console.log(chalk.blue.bold(data));
+    return LogHelper.info(chalk.blue(`Semverbot v${version}`));
   });
 };
 
@@ -60,17 +61,27 @@ const init = async () => {
     currentVersion = await BranchHelper.getLastTagVersion();
     newVersion = semver.inc(currentVersion, incrementType);
     if (mergedPrefix) {
-      LogHelper.info(`Merged prefix is ${chalk.underline.green(mergedPrefix)}. Incrementing ${chalk.underline.yellow(incrementType)} version.`);
+      LogHelper.info(`Merged prefix is ${chalk.underline(mergedPrefix)}. Incrementing ${chalk.underline(incrementType)} version.`);
     } else {
       LogHelper.info(`Forced increment type detected. Incrementing ${chalk.underline(incrementType)}`);
     }
   }
 
-  LogHelper.info(`Current version is ${chalk.underline.blue(currentVersion)}`);
-  LogHelper.info(`New version will be ${chalk.underline.blue(newVersion)}`);
+  LogHelper.info(`Current version is ${chalk.underline(currentVersion)}`);
+  LogHelper.info(`New version will be ${chalk.underline(newVersion)}`);
+
+  DeployDataHelper.set({
+    currentBranch,
+    subjectOptions,
+    mergedPrefix,
+    incrementType,
+    currentVersion,
+    newVersion
+  });
 
   FileHandlers.handleFileUpdate(branchConfig.fileHandlers, newVersion);
   await BranchHelper.pushFiles(branchConfig.fileHandlers);
+  await BranchHelper.pushTag(newVersion);
 };
 
 export default {
