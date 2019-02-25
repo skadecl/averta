@@ -1,5 +1,5 @@
 import LogHelper from '../helpers/LogHelper';
-import ConfigSchema from './ConfigSchema';
+import ConfigSchema from './configSchema';
 
 const jsonFile = require('edit-json-file');
 const process = require('process');
