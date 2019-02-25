@@ -6,7 +6,7 @@ const process = require('process');
 const chalk = require('chalk');
 const JSONValidator = require('jsonschema').Validator;
 
-const semverbotConfig = {
+const avertaConfig = {
   loaded: false,
   valid: false,
   current: null,
@@ -17,7 +17,7 @@ const isConfigValid = () => {
   const configValidator = new JSONValidator();
   Object.keys(ConfigSchema)
     .forEach(schema => configValidator.addSchema(ConfigSchema[schema], ConfigSchema[schema].id));
-  const result = configValidator.validate(semverbotConfig.data, ConfigSchema.Config);
+  const result = configValidator.validate(avertaConfig.data, ConfigSchema.Config);
 
   if (result.errors.length) {
     result.errors.forEach((error) => {
@@ -33,27 +33,27 @@ const isConfigValid = () => {
 
 const load = () => new Promise((resolve) => {
   const rootPath = process.cwd();
-  const config = jsonFile(`${rootPath}/../semverconfig.json`);
+  const config = jsonFile(`${rootPath}/avertaconfig.json`);
 
   if (config.data) {
     config.data.rootPath = rootPath;
-    semverbotConfig.data = config.data;
-    semverbotConfig.loaded = true;
-    semverbotConfig.valid = isConfigValid();
-    resolve(semverbotConfig.data);
+    avertaConfig.data = config.data;
+    avertaConfig.loaded = true;
+    avertaConfig.valid = isConfigValid();
+    resolve(avertaConfig.data);
   } else {
-    LogHelper.throwException('semverconfig.json file not found.');
+    LogHelper.throwException('avertaconfig.json file not found.');
   }
 });
 
-const all = () => semverbotConfig.data;
+const all = () => avertaConfig.data;
 
-const current = () => semverbotConfig.current;
+const current = () => avertaConfig.current;
 
 const setBranch = (branchName) => {
-  const config = semverbotConfig.data.find(cfg => cfg.targetBranches.includes(branchName));
+  const config = avertaConfig.data.find(cfg => cfg.targetBranches.includes(branchName));
   if (config) {
-    semverbotConfig.current = config;
+    avertaConfig.current = config;
     return config;
   }
   return LogHelper.throwException(`Branch ${chalk.underline(branchName)} was not found in configuration file.`);

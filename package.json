@@ -1,7 +1,7 @@
 {
-  "name": "semverbot",
-  "version": "0.0.2",
-  "description": "Automate your project's version tagging",
+  "name": "averta",
+  "version": "0.0.1",
+  "description": "Automated versionning and tagging for your deployments",
   "main": "index.js",
   "scripts": {
     "clean": "rimraf bin",
@@ -20,14 +20,14 @@
     "src"
   ],
   "bin": {
-    "semverbot": "dist/index.js"
+    "averta": "dist/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/skadecl/semverbot.git"
+    "url": "git+https://github.com/skadecl/averta.git"
   },
   "keywords": [
-    "semverbot",
+    "averta",
     "semver",
     "semantic",
     "version",
@@ -41,11 +41,11 @@
     "increment"
   ],
   "author": "skadecl",
-  "license": "MIT",
+  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/skadecl/semverbot/issues"
+    "url": "https://github.com/skadecl/averta/issues"
   },
-  "homepage": "https://github.com/skadecl/semverbot#readme",
+  "homepage": "https://github.com/skadecl/averta#readme",
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-eslint": "^8.2.1",

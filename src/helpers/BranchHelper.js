@@ -15,7 +15,7 @@ const checkGitVersion = async () => {
   if (!err) {
     return true;
   }
-  return LogHelper.throwException('You must install git before using semverbot.', null, false);
+  return LogHelper.throwException('You must install git before using averta.', null, false);
 };
 
 const checkGitDirectory = async () => {
@@ -25,7 +25,7 @@ const checkGitDirectory = async () => {
   } else if (err) {
     return LogHelper.throwException('Could not check whether current directory is a git project.', err, false);
   }
-  return LogHelper.throwException('You must be inside a git directory in order to use semverbot.', null, false);
+  return LogHelper.throwException('You must be inside a git directory in order to use averta.', null, false);
 };
 
 const checkCleanliness = async () => {
@@ -73,7 +73,8 @@ const fetchRemote = async () => {
 };
 
 const getLastMergedBranchesNames = async () => {
-  const [hashesLines, hashesErr] = await until(ShellHelper.exec('git log --merges --first-parent master -n 1 --pretty=%P'));
+  const currentBranchName = await getCurrentBranchName();
+  const [hashesLines, hashesErr] = await until(ShellHelper.exec(`git log --merges --first-parent ${currentBranchName} -n 1 --pretty=%P`));
   if (hashesLines) {
     const commitHash = hashesLines[0].split(' ')[0];
     return getBranchNamesFromCommitHash(commitHash);
@@ -100,19 +101,39 @@ const getBranchPushTimestamp = async (branchName) => {
   return LogHelper.throwException(`Could not get reflog for branch ${branchName}`, err);
 };
 
+const getAvailablePrefixes = () => {
+  const { rules } = Config.current();
+  return rules.major.prefixes
+    .concat(rules.minor.prefixes)
+    .concat(rules.patch.prefixes);
+};
+
+const getBranchNamePrefix = (branchName) => {
+  const splitName = branchName.split('/');
+  if (splitName.length > 1) {
+    return splitName[0];
+  }
+  return undefined;
+};
+
 const getLastMergedPrefix = async () => {
   const currentBranchName = await getCurrentBranchName();
   const mergedBranchNames = await getLastMergedBranchesNames();
+  const availablePrefixes = getAvailablePrefixes();
+
   const candidateBranches = (
     await Promise.all(mergedBranchNames
       .filter(name => name !== currentBranchName)
+      .filter(name => availablePrefixes.includes(getBranchNamePrefix(name)))
       .filter(name => isBranchClean(name))
       .map(async name => ({ name, date: await getBranchPushTimestamp(name) })))
-  ).sort((branchA, branchB) => branchA.date - branchB.date);
+  ).sort((branchA, branchB) => branchB.date - branchA.date);
 
-  if (!candidateBranches) {
+  if (!candidateBranches.length) {
     LogHelper.throwException('Could not find a suitable merged branch candidate');
   }
+
+  console.log('candidates: ', candidateBranches);
 
   const splitName = candidateBranches[0].name.split('/');
   if (splitName.length > 1) {
@@ -150,7 +171,7 @@ const getCommitSubjectVersion = async () => {
 const resetChanges = () => {
   LogHelper.info('Resetting all changes and commits...');
   if (shell.exec('git reset --hard', { silent: true }).code !== 0) {
-    LogHelper.error('Could not reset changes. You must discard them yourself before using semverbot again.');
+    LogHelper.error('Could not reset changes. You must discard them yourself before using averta again.');
   }
 };
 
@@ -177,7 +198,8 @@ const addFiles = async (fileHandlers) => {
 const commitAndPush = async () => {
   const message = DeployDataHelper.fillTemplate(Config.current().messages.commit);
   const spinner = LogHelper.spinner('Pushing...');
-  const [, err] = await until(ShellHelper.exec(`git commit -m "${message}"`));
+  const branchName = await getCurrentBranchName();
+  const [, err] = await until(ShellHelper.exec(`git commit -m "${message}" && git push origin ${branchName}`));
   spinner.stop(true);
   if (!err) {
     return true;
@@ -198,7 +220,7 @@ const pushFiles = async (fileHandlers) => {
 const pushTag = async (tag) => {
   const message = DeployDataHelper.fillTemplate(Config.current().messages.tag);
   const prefix = 'v';
-  const [tagLines, err] = await until(ShellHelper.exec(`git tag -a ${prefix}${tag} -m "${message}"`));
+  const [tagLines, err] = await until(ShellHelper.exec(`git tag -a ${prefix}${tag} -m "${message}" && git push origin ${prefix}${tag}`));
   if (err) {
     return LogHelper.throwException(`Could not create a tag named ${prefix}${tag}`, err);
   }

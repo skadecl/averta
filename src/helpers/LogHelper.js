@@ -25,7 +25,7 @@ const info = (message, description) => {
 };
 
 const exit = (message, description) => {
-  let messageOutput = `[SEMVERBOT] ${message}`;
+  let messageOutput = `[Averta] ${message}`;
   if (description) {
     messageOutput += `: ${chalk.blue(description)}`;
   }

@@ -2,8 +2,8 @@
 
 import 'babel-polyfill';
 import ProcessHelper from './helpers/ProcessHelper';
-import Semverbot from './Semverbot';
+import Averta from './Averta';
 
 ProcessHelper.initProcessEventHandlers();
 
-Semverbot.init();
+Averta.init();

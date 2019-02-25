@@ -11,12 +11,12 @@ const figlet = require('figlet');
 const { version } = require('../package.json');
 
 const greet = () => {
-  figlet('Semverbot', (err, data) => {
+  figlet('Averta', (err, data) => {
     if (err) {
       return LogHelper.throwException('Could not show greet message.');
     }
     console.log(chalk.blue.bold(data));
-    return LogHelper.info(chalk.blue(`Semverbot v${version}`));
+    return LogHelper.info(chalk.blue(`Averta v${version}`));
   });
 };
 
