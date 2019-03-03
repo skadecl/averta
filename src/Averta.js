@@ -2,8 +2,7 @@ import BranchHelper from './helpers/BranchHelper';
 import Config from './config/Config';
 import SemverHelper from './helpers/SemverHelper';
 import LogHelper from './helpers/LogHelper';
-import FileHandlers from './handlers';
-import DeployDataHelper from './helpers/DeployDataHelper';
+import SubjectOptionsHelper from './helpers/SubjectOptionsHelper';
 
 const semver = require('semver');
 const chalk = require('chalk');
@@ -29,62 +28,64 @@ const init = async () => {
   await BranchHelper.fetchRemote();
   await Config.load();
 
-  let mergedPrefix;
-  let incrementType;
-  let currentVersion;
-  let newVersion;
-
-  const subjectOptions = await BranchHelper.getCommitSubjectOptions();
   const currentBranch = await BranchHelper.getCurrentBranchName();
-  const currentRepository = await BranchHelper.getRepositoryName();
-  const branchConfig = Config.setBranch(currentBranch);
+  // const currentRepository = await BranchHelper.getRepositoryName();
+  // const lastTag = await BranchHelper.getLastTag();
+  const lastTag = 'v1.5.3';
+  const commitsSinceTag = await BranchHelper.getCommitsSinceTag(lastTag);
+  // const branchConfig = Config.setBranch(currentBranch);
+  Config.setBranch(currentBranch);
 
-  if (subjectOptions.SKIP) {
-    LogHelper.exit('Skip option detected in commit subject', 'Skipping');
-  } else if (subjectOptions.FORCE_MAJOR) {
-    incrementType = 'major';
-  } else if (subjectOptions.FORCE_MINOR) {
-    incrementType = 'minor';
-  } else if (subjectOptions.FORCE_PATCH) {
-    incrementType = 'patch';
-  }
+  let currentVersion = SemverHelper.parseLineToVersion(lastTag);
 
-  if (!incrementType) {
-    mergedPrefix = await BranchHelper.getLastMergedPrefix();
-    incrementType = SemverHelper.getIncrementType(mergedPrefix);
-  }
+  for (let i = 0; i < commitsSinceTag.length; i++) {
+    let newVersion;
+    const commit = commitsSinceTag[i];
 
-  if (subjectOptions.FORCE_VERSION) {
-    currentVersion = await BranchHelper.getCommitSubjectVersion();
-    newVersion = currentVersion;
-    LogHelper.info('Force version option was detected. Version not incrementing');
-  } else {
-    currentVersion = await BranchHelper.getLastTagVersion();
-    newVersion = semver.inc(currentVersion, incrementType);
-    if (mergedPrefix) {
-      LogHelper.info(`Merged prefix is ${chalk.underline(mergedPrefix)}. Incrementing ${chalk.underline(incrementType)} version.`);
+    LogHelper.info(`Processing commit ${chalk.bold(commit.hash)}`);
+
+    commit.options = SubjectOptionsHelper.build(commit.body);
+    if (commit.options.SKIP) {
+      LogHelper.info('Skip option detected in commit subject');
+      commit.skip = true;
+    } else if (commit.options.FORCE_VERSION) {
+      LogHelper.info('Force VERSION option detected in commit subject');
+      commit.force = true;
+      commit.version = BranchHelper.getCommitBodyVersion(commit.body);
+    } else if (commit.options.FORCE_MAJOR) {
+      LogHelper.info('Force MAJOR option detected in commit subject');
+      commit.increment = 'major';
+    } else if (commit.options.FORCE_MINOR) {
+      LogHelper.info('Force MINOR option detected in commit subject');
+      commit.increment = 'minor';
+    } else if (commit.options.FORCE_PATCH) {
+      LogHelper.info('Force PATCH option detected in commit subject');
+      commit.increment = 'patch';
+    } else if (commit.isMerge) {
+      commit.prefix = await BranchHelper.getReferencePrefix(commit);
+      commit.increment = SemverHelper.getIncrementType(commit.prefix);
     } else {
-      LogHelper.info(`Forced increment type detected. Incrementing ${chalk.underline(incrementType)}`);
+      LogHelper.info('No valid option nor merge were detected');
+      commit.skip = true;
+    }
+
+    if (commit.increment || commit.force) {
+      newVersion = commit.force ? commit.version : semver.inc(currentVersion, commit.increment);
+
+      if (newVersion) {
+        LogHelper.info(`Current version is ${chalk.underline(currentVersion)}`);
+        LogHelper.info(`New version will be ${chalk.underline(newVersion)}`);
+        currentVersion = newVersion;
+      }
+    } else {
+      LogHelper.info('Skipping commit...');
     }
   }
 
-  LogHelper.info(`Current version is ${chalk.underline(currentVersion)}`);
-  LogHelper.info(`New version will be ${chalk.underline(newVersion)}`);
-
-  DeployDataHelper.set({
-    currentRepository,
-    currentBranch,
-    subjectOptions,
-    mergedPrefix,
-    incrementType,
-    currentVersion,
-    newVersion
-  });
-
-  FileHandlers.handleFileUpdate(branchConfig.fileHandlers, newVersion);
-  await BranchHelper.pushFiles(branchConfig.fileHandlers);
-  await BranchHelper.pushTag(newVersion);
-  await DeployDataHelper.sendWebHooks(branchConfig.webHooks);
+  // FileHandlers.handleFileUpdate(branchConfig.fileHandlers, newVersion);
+  // await BranchHelper.pushFiles(branchConfig.fileHandlers);
+  // await BranchHelper.pushTag(newVersion);
+  // await DeployDataHelper.sendWebHooks(branchConfig.webHooks);
 };
 
 export default {
