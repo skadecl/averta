@@ -5,12 +5,12 @@ const containsOption = (subjectLines, option) => (
 
 const build = (subjectLines) => {
   const options = {
-    SKIP: '[svb skip]',
-    FORCE_VERSION: '[svb force]',
-    FORCE_MAJOR: '[svb major]',
-    FORCE_MINOR: '[svb minor]',
-    FORCE_PATCH: '[svb patch]',
-    NO_TAG: '[svb notag]'
+    SKIP: '[avt skip]',
+    FORCE_VERSION: '[avt force]',
+    FORCE_MAJOR: '[avt major]',
+    FORCE_MINOR: '[avt minor]',
+    FORCE_PATCH: '[avt patch]',
+    NO_TAG: '[avt notag]'
   };
 
   Object.keys(options)
