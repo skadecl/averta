@@ -8,6 +8,8 @@
     "comma-dangle": ["error", "only-multiline"],
     "no-console": "off",
     "no-useless-escape": "off",
-    "no-return-assign": "off"
+    "no-return-assign": "off",
+    "no-await-in-loop": "off",
+    "no-plusplus": "off"
   }
 }
