@@ -11,7 +11,9 @@ const getIncrementType = (prefix) => {
   } else if (flows.patch.prefixes.includes(prefix)) {
     return 'patch';
   }
-  return LogHelper.exit('Last merged branch prefix is not included in any flow', 'Skipping...');
+
+  LogHelper.info('No valid prefix was found this commit. Skipping...');
+  return null;
 };
 
 const parseLineToVersion = (line) => {
