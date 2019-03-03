@@ -1,7 +1,6 @@
 import ShellHelper from './ShellHelper';
 import LogHelper from './LogHelper';
 import until from './Until';
-import SubjectOptionsHelper from './SubjectOptionsHelper';
 import SemverHelper from './SemverHelper';
 import Config from '../config/Config';
 import DeployDataHelper from './DeployDataHelper';
@@ -9,6 +8,14 @@ import DeployDataHelper from './DeployDataHelper';
 const chalk = require('chalk');
 const semver = require('semver');
 const shell = require('shelljs');
+
+const taggedBranches = [];
+const branchLocators = [
+  'Merge in (.*) \(pull request',
+  "Merge branch \'(.*)\'",
+  'Merge branch \"(.*)\"',
+
+];
 
 const checkGitVersion = async () => {
   const [, err] = await until(ShellHelper.exec('git --version'));
@@ -54,14 +61,6 @@ const getBranchNamesFromCommitHash = async (hash) => {
   return LogHelper.throwException('Could not find last merged branch', err);
 };
 
-const getCommitSubjectOptions = async () => {
-  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | head -1'));
-  if (subjectLines) {
-    return SubjectOptionsHelper.build(subjectLines);
-  }
-  return LogHelper.throwException('Could not get last commit subject', err);
-};
-
 const fetchRemote = async () => {
   const spinner = LogHelper.spinner('Fetching branches');
   const [, fetchedErr] = await until(ShellHelper.exec('git fetch && git pull'));
@@ -70,16 +69,6 @@ const fetchRemote = async () => {
     return LogHelper.throwException('Could not fetch remote branches', fetchedErr);
   }
   return true;
-};
-
-const getLastMergedBranchesNames = async () => {
-  const currentBranchName = await getCurrentBranchName();
-  const [hashesLines, hashesErr] = await until(ShellHelper.exec(`git log --merges --first-parent ${currentBranchName} -n 1 --pretty=%P`));
-  if (hashesLines) {
-    const commitHash = hashesLines[0].split(' ')[0];
-    return getBranchNamesFromCommitHash(commitHash);
-  }
-  return LogHelper.throwException('Could not find last merged branch', hashesErr);
 };
 
 const isBranchClean = async (branchName) => {
@@ -91,7 +80,7 @@ const isBranchClean = async (branchName) => {
 };
 
 const getBranchPushTimestamp = async (branchName) => {
-  const [reflogLines, err] = await until(ShellHelper.exec(`git reflog show ${branchName} --pretty=\'%gd\' --date=unix -n 1`));
+  const [reflogLines, err] = await until(ShellHelper.exec(`git reflog show ${branchName} --pretty='%gd' --date=unix -n 1`));
   if (reflogLines) {
     const timestampMatches = reflogLines[0].match('\@\{([0-9]+)\}');
     if (timestampMatches && timestampMatches[1]) {
@@ -116,56 +105,63 @@ const getBranchNamePrefix = (branchName) => {
   return undefined;
 };
 
-const getLastMergedPrefix = async () => {
+const getReferencePrefix = async (commit) => {
   const currentBranchName = await getCurrentBranchName();
-  const mergedBranchNames = await getLastMergedBranchesNames();
+  const mergedBranchNames = await getBranchNamesFromCommitHash(commit.parentHash);
   const availablePrefixes = getAvailablePrefixes();
 
   const candidateBranches = (
     await Promise.all(mergedBranchNames
       .filter(name => name !== currentBranchName)
       .filter(name => availablePrefixes.includes(getBranchNamePrefix(name)))
+      .filter(name => !taggedBranches.includes(name))
       .filter(name => isBranchClean(name))
       .map(async name => ({ name, date: await getBranchPushTimestamp(name) })))
-  ).sort((branchA, branchB) => branchB.date - branchA.date);
+  )
+    .filter(branch => branch.date <= commit.date)
+    .sort((branchA, branchB) => branchB.date - branchA.date);
 
   if (!candidateBranches.length) {
-    LogHelper.throwException('Could not find a suitable merged branch candidate');
+    return null;
   }
-
-  console.log('candidates: ', candidateBranches);
 
   const splitName = candidateBranches[0].name.split('/');
   if (splitName.length > 1) {
+    taggedBranches.push(candidateBranches[0].name);
     return splitName[0];
   }
 
-  return LogHelper.throwException('Could not extract prefix from last merged branch');
+  return null;
 };
 
-const getLastTagVersion = async () => {
+const getBodyPrefix = (commit) => {
+  const availablePrefixes = getAvailablePrefixes();
+  let mergePrefix;
+  commit.body
+    .filter(line => av)
+};
+
+const getLastTag = async () => {
   const [tagLines, err] = await until(ShellHelper.exec('git describe --abbrev=0'));
   if (tagLines) {
-    return SemverHelper.parseLineToVersion(tagLines[0]);
+    return tagLines[0];
   }
   return LogHelper.throwException('No tag was found', err);
 };
 
-const getCommitSubjectVersion = async () => {
-  const [subjectLines, err] = await until(ShellHelper.exec('git log -1 --pretty=%B | head -1'));
-  if (subjectLines) {
-    let cleanVersion = null;
-    subjectLines.forEach((line) => {
-      const lineVersion = SemverHelper.parseLineToVersion(line);
-      cleanVersion = semver.valid(lineVersion) ? lineVersion : null;
-    });
+const getCommitBodyVersion = (body) => {
+  let cleanVersion = null;
+  body.reverse().forEach((line) => {
+    const lineVersion = SemverHelper.parseLineToVersion(line);
+    cleanVersion = semver.valid(lineVersion) ? lineVersion : null;
+  });
 
-    if (cleanVersion) {
-      return cleanVersion;
-    }
-    return LogHelper.throwException('No valid version could be obtained from last commit subject.');
+  if (cleanVersion) {
+    return cleanVersion;
   }
-  return LogHelper.throwException('Could not get last commit subject', err);
+
+  LogHelper.info('No valid version was found in commit subject');
+  return null;
 };
 
 const resetChanges = () => {
@@ -231,9 +227,34 @@ const pushTag = async (tag) => {
 const getRepositoryName = async () => {
   const [nameLines, err] = await until(ShellHelper.exec('git rev-parse --show-toplevel'));
   if (err) {
-    return LogHelper.throwException('Could not obtain repository name');
+    return LogHelper.throwException('Could not obtain repository name', err);
   }
   return nameLines[0].split('/').slice(-1);
+};
+
+const getCommitBody = async (hash) => {
+  const [bodyLines, err] = await until(ShellHelper.exec(`git log ${hash} -n 1 --pretty=%B`));
+  if (err) {
+    return LogHelper.throwException(`Could not obtain commit ${hash} body`, err);
+  }
+  return bodyLines;
+};
+
+const getCommitsSinceTag = async (tag) => {
+  const branchName = await getCurrentBranchName();
+  const [hashesLines, err] = await until(ShellHelper.exec(`git log ${branchName} ${tag}..HEAD --pretty=format:'%H %ct %P'`));
+  if (!err) {
+    return Promise.all((hashesLines || []).map(async line => (
+      {
+        hash: line.split(' ')[0],
+        date: line.split(' ')[1],
+        parentHash: line.split(' ')[2],
+        isMerge: line.split(' ').length > 3,
+        body: await getCommitBody(line.split(' ')[0])
+      }
+    )).reverse());
+  }
+  return LogHelper.throwException(`Could not obtain commits since tag ${tag}`, err);
 };
 
 export default {
@@ -241,13 +262,13 @@ export default {
   checkGitVersion,
   checkCleanliness,
   checkGitDirectory,
-  getCommitSubjectVersion,
+  getCommitBodyVersion,
   getCurrentBranchName,
-  getCommitSubjectOptions,
-  getLastTagVersion,
-  getLastMergedPrefix,
+  getLastTag,
+  getReferencePrefix,
   resetChanges,
   pushFiles,
   pushTag,
-  getRepositoryName
+  getRepositoryName,
+  getCommitsSinceTag
 };
