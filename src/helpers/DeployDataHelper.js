@@ -1,6 +1,7 @@
-import until from './Until';
+import until from '../utils/Until';
 import LogHelper from './LogHelper';
 import PayloadTemplates from '../templates';
+import Config from '../config/Config';
 
 const axios = require('axios');
 const chalk = require('chalk');
@@ -8,31 +9,42 @@ const chalk = require('chalk');
 let deployData = {
   currentRepository: '',
   currentBranch: '',
-  subjectOptions: {},
-  mergedPrefix: '',
-  incrementType: '',
-  currentVersion: '',
-  newVersion: ''
+  commit: {}
+};
+
+const link = (urlType, resource) => {
+  const repositoryUrl = Config.current().links.repository;
+  const url = urlType ? Config.current().links[urlType] : '';
+  return repositoryUrl + url + resource;
 };
 
 const templateKeys = {
+  '%rL': () => link(null, deployData.currentRepository),
+  '%bL': () => link('branches', deployData.currentBranch),
+  '%cL': () => link('commits', deployData.commit.hash),
+  '%ovL': () => link('tags', Config.current().options.tagPrefix + deployData.commit.oldVersion),
+  '%nvL': () => link('tags', Config.current().options.tagPrefix + deployData.commit.version),
   '%r': () => deployData.currentRepository,
   '%b': () => deployData.currentBranch,
-  '%fv': () => deployData.subjectOptions.FORCE_VERSION,
-  '%fM': () => deployData.subjectOptions.FORCE_MAJOR,
-  '%fm': () => deployData.subjectOptions.FORCE_MINOR,
-  '%fp': () => deployData.subjectOptions.FORCE_PATCH,
-  '%fs': () => deployData.subjectOptions.SKIP,
-  '%p': () => deployData.mergedPrefix,
-  '%i': () => deployData.incrementType,
-  '%cv': () => deployData.currentVersion,
-  '%nv': () => deployData.newVersion
+  '%fv': () => deployData.commit.options.FORCE_VERSION,
+  '%fM': () => deployData.commit.options.FORCE_MAJOR,
+  '%fm': () => deployData.commit.options.FORCE_MINOR,
+  '%fp': () => deployData.commit.options.FORCE_PATCH,
+  '%fs': () => deployData.commit.options.SKIP,
+  '%p': () => deployData.commit.prefix,
+  '%i': () => deployData.commit.increment,
+  '%ov': () => deployData.commit.oldVersion,
+  '%nv': () => deployData.commit.version,
+  '%h': () => deployData.commit.hash.slice(0, 7),
+  '%H': () => deployData.commit.hash,
+  '%a': () => deployData.commit.author,
+  '%tp': () => Config.current().options.tagPrefix || 'v'
 };
 
 const get = () => deployData;
 
 const set = (data) => {
-  deployData = data;
+  deployData = Object.assign(deployData, data);
 };
 
 const replaceInLine = (line, search, replacement) => line.split(search).join(replacement);
@@ -68,12 +80,12 @@ const fillTemplate = (template) => {
   }
 };
 
-const sendWebHooks = async (webHooks) => {
+const sendWebHooks = async (webHooks, commit) => {
   if (!webHooks || !webHooks.length) {
     return;
   }
 
-  const spinner = LogHelper.spinner('Sending WebHooks...');
+  set({ commit });
   const responses = await Promise.all((webHooks)
     .map(async (webHook) => {
       const request = {
@@ -88,7 +100,6 @@ const sendWebHooks = async (webHooks) => {
       return until(axios(request));
     }));
 
-  spinner.stop(true);
   responses.forEach((response, i) => {
     const [, err] = response;
     if (err) {
